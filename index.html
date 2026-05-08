@@ -1,0 +1,184 @@
+import { useState, useEffect } from "react";
+
+const MOODS = ["😊","😐","😢","😡","😴","🥰","😰"];
+const WEATHERS = ["☀️","☁️","🌧️","⛄"];
+
+function formatDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function displayDate(dateStr) {
+  const [y,m,d] = dateStr.split("-");
+  return `${y}년 ${parseInt(m)}월 ${parseInt(d)}일`;
+}
+
+export default function App() {
+  const [entries, setEntries] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("diary_entries") || "{}"); } catch { return {}; }
+  });
+  const [view, setView] = useState("write"); // write | list | read
+  const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
+  const [draft, setDraft] = useState({ text:"", mood:"", weather:"" });
+  const [readEntry, setReadEntry] = useState(null);
+  const [saved, setSaved] = useState(false);
+  const [warn, setWarn] = useState("");
+
+  useEffect(() => {
+    const e = entries[selectedDate];
+    setDraft(e ? { text: e.text, mood: e.mood, weather: e.weather } : { text:"", mood:"", weather:"" });
+    setSaved(false);
+  }, [selectedDate]);
+
+  useEffect(() => {
+    localStorage.setItem("diary_entries", JSON.stringify(entries));
+  }, [entries]);
+
+  const totalCount = Object.keys(entries).length;
+  const streak = (() => {
+    let count = 0, d = new Date();
+    while (entries[formatDate(d)]) { count++; d.setDate(d.getDate()-1); }
+    return count;
+  })();
+
+  function save() {
+    if (!draft.text.trim()) return;
+    if (!draft.mood) { setWarn("기분을 선택해주세요! 😊"); return; }
+    if (!draft.weather) { setWarn("날씨를 선택해주세요! 🌤️"); return; }
+    setWarn("");
+    setEntries(prev => ({ ...prev, [selectedDate]: { ...draft, updatedAt: Date.now() } }));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  function deleteEntry(date) {
+    setEntries(prev => { const n = {...prev}; delete n[date]; return n; });
+    setView("list");
+  }
+
+  // Sorted list
+  const sortedDates = Object.keys(entries).sort((a,b) => b.localeCompare(a));
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#fafaf8", fontFamily:"'Pretendard','Apple SD Gothic Neo',sans-serif", color:"#1a1a1a" }}>
+      {/* Header */}
+      <header style={{ borderBottom:"1px solid #ebebeb", padding:"18px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#fff", position:"sticky", top:0, zIndex:10 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:22, fontWeight:700, letterSpacing:"-0.5px" }}>📔 오늘의 일기</span>
+        </div>
+        <div style={{ display:"flex", gap:8 }}>
+          <button onClick={()=>setView("write")} style={{ padding:"7px 16px", borderRadius:20, border:"none", background: view==="write"?"#1a1a1a":"#f0f0ee", color: view==="write"?"#fff":"#555", fontWeight:600, cursor:"pointer", fontSize:13 }}>✏️ 쓰기</button>
+          <button onClick={()=>setView("list")} style={{ padding:"7px 16px", borderRadius:20, border:"none", background: view==="list"||view==="read"?"#1a1a1a":"#f0f0ee", color: view==="list"||view==="read"?"#fff":"#555", fontWeight:600, cursor:"pointer", fontSize:13 }}>📚 모아보기</button>
+        </div>
+      </header>
+
+      <main style={{ maxWidth:640, margin:"0 auto", padding:"28px 20px" }}>
+        {/* Stats */}
+        <div style={{ display:"flex", gap:12, marginBottom:28 }}>
+          {[{label:"총 일기",val:`${totalCount}개`},{label:"연속 기록",val:`${streak}일`}].map(s=>(
+            <div key={s.label} style={{ flex:1, background:"#fff", border:"1px solid #ebebeb", borderRadius:14, padding:"14px 18px" }}>
+              <div style={{ fontSize:11, color:"#aaa", fontWeight:500, marginBottom:4 }}>{s.label}</div>
+              <div style={{ fontSize:22, fontWeight:700 }}>{s.val}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* WRITE VIEW */}
+        {view==="write" && (
+          <div>
+            {/* Date picker */}
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
+              <button onClick={()=>{ const d=new Date(selectedDate); d.setDate(d.getDate()-1); setSelectedDate(formatDate(d)); }} style={{ background:"none", border:"1px solid #e0e0e0", borderRadius:8, width:32, height:32, cursor:"pointer", fontSize:16 }}>‹</button>
+              <span style={{ fontWeight:600, fontSize:15 }}>{displayDate(selectedDate)}</span>
+              <button onClick={()=>{ const d=new Date(selectedDate); d.setDate(d.getDate()+1); const today=formatDate(new Date()); const next=formatDate(d); if(next<=today) setSelectedDate(next); }} style={{ background:"none", border:"1px solid #e0e0e0", borderRadius:8, width:32, height:32, cursor:"pointer", fontSize:16 }}>›</button>
+              <button onClick={()=>setSelectedDate(formatDate(new Date()))} style={{ marginLeft:"auto", fontSize:12, color:"#888", background:"none", border:"1px solid #e0e0e0", borderRadius:8, padding:"4px 10px", cursor:"pointer" }}>오늘</button>
+            </div>
+
+            {/* Mood */}
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:12, color:"#aaa", marginBottom:8, fontWeight:500 }}>오늘의 기분</div>
+              <div style={{ display:"flex", gap:8 }}>
+                {MOODS.map(m=>(
+                  <button key={m} onClick={()=>setDraft(p=>({...p, mood:p.mood===m?"":m}))} style={{ fontSize:22, background: draft.mood===m?"#f0efe8":"none", border: draft.mood===m?"2px solid #c8c4b0":"2px solid transparent", borderRadius:10, width:40, height:40, cursor:"pointer", transition:"all .15s" }}>{m}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Weather */}
+            <div style={{ marginBottom:18 }}>
+              <div style={{ fontSize:12, color:"#aaa", marginBottom:8, fontWeight:500 }}>날씨</div>
+              <div style={{ display:"flex", gap:8 }}>
+                {WEATHERS.map(w=>(
+                  <button key={w} onClick={()=>setDraft(p=>({...p, weather:p.weather===w?"":w}))} style={{ fontSize:22, background: draft.weather===w?"#f0efe8":"none", border: draft.weather===w?"2px solid #c8c4b0":"2px solid transparent", borderRadius:10, width:40, height:40, cursor:"pointer", transition:"all .15s" }}>{w}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Editor */}
+            <textarea
+              value={draft.text}
+              onChange={e=>{ setDraft(p=>({...p,text:e.target.value})); setSaved(false); }}
+              placeholder="오늘 하루는 어땠나요? 자유롭게 기록해 보세요..."
+              style={{ width:"100%", minHeight:260, border:"1px solid #e8e8e6", borderRadius:14, padding:"18px", fontSize:15, lineHeight:1.8, resize:"vertical", outline:"none", background:"#fff", boxSizing:"border-box", color:"#1a1a1a", fontFamily:"inherit" }}
+            />
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:12 }}>
+              <span style={{ fontSize:12, color:"#bbb" }}>{draft.text.length}자</span>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
+                {warn && <span style={{ fontSize:12, color:"#e05555", fontWeight:500 }}>⚠️ {warn}</span>}
+                <button onClick={save} disabled={!draft.text.trim()} style={{ padding:"10px 28px", borderRadius:20, border:"none", background: draft.text.trim()?"#1a1a1a":"#ddd", color:"#fff", fontWeight:700, cursor: draft.text.trim()?"pointer":"default", fontSize:14, transition:"background .2s" }}>
+                  {saved ? "✓ 저장됨" : "저장하기"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LIST VIEW */}
+        {view==="list" && (
+          <div>
+            <div style={{ fontSize:13, color:"#aaa", marginBottom:16, fontWeight:500 }}>총 {totalCount}개의 일기</div>
+            {sortedDates.length === 0 && (
+              <div style={{ textAlign:"center", padding:"60px 0", color:"#bbb" }}>
+                <div style={{ fontSize:40, marginBottom:12 }}>📭</div>
+                <div>아직 작성된 일기가 없어요.<br/>첫 일기를 써보세요!</div>
+              </div>
+            )}
+            {sortedDates.map(date => {
+              const e = entries[date];
+              return (
+                <div key={date} onClick={()=>{ setReadEntry({date, ...e}); setView("read"); }} style={{ background:"#fff", border:"1px solid #ebebeb", borderRadius:14, padding:"16px 20px", marginBottom:12, cursor:"pointer", transition:"box-shadow .15s" }}
+                  onMouseEnter={el=>el.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,0.07)"}
+                  onMouseLeave={el=>el.currentTarget.style.boxShadow="none"}
+                >
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                    <span style={{ fontWeight:600, fontSize:14 }}>{displayDate(date)}</span>
+                    <span style={{ fontSize:18 }}>{e.mood} {e.weather}</span>
+                  </div>
+                  <div style={{ fontSize:14, color:"#666", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{e.text}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* READ VIEW */}
+        {view==="read" && readEntry && (
+          <div>
+            <button onClick={()=>setView("list")} style={{ background:"none", border:"none", color:"#888", cursor:"pointer", fontSize:13, marginBottom:20, padding:0 }}>← 목록으로</button>
+            <div style={{ background:"#fff", border:"1px solid #ebebeb", borderRadius:16, padding:"28px 24px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
+                <div>
+                  <div style={{ fontWeight:700, fontSize:18, marginBottom:4 }}>{displayDate(readEntry.date)}</div>
+                  <div style={{ fontSize:22 }}>{readEntry.mood} {readEntry.weather}</div>
+                </div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <button onClick={()=>{ setSelectedDate(readEntry.date); setView("write"); }} style={{ padding:"6px 14px", borderRadius:12, border:"1px solid #e0e0e0", background:"none", cursor:"pointer", fontSize:12, color:"#555" }}>수정</button>
+                  <button onClick={()=>deleteEntry(readEntry.date)} style={{ padding:"6px 14px", borderRadius:12, border:"1px solid #ffd0d0", background:"none", cursor:"pointer", fontSize:12, color:"#e05555" }}>삭제</button>
+                </div>
+              </div>
+              <div style={{ fontSize:15, lineHeight:1.9, color:"#333", whiteSpace:"pre-wrap" }}>{readEntry.text}</div>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
