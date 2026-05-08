@@ -1,184 +1,312 @@
-import { useState, useEffect } from "react";
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>My Diary</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f1f3f4; font-family: 'Google Sans', Roboto, Arial, sans-serif; color: #202124; min-height: 100vh; }
 
+  /* Header */
+  header { background: #fff; box-shadow: 0 1px 3px rgba(60,64,67,.15), 0 1px 2px rgba(60,64,67,.3); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg,#4285f4,#34a853); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .logo-text { font-size: 20px; font-weight: 500; color: #202124; }
+  nav { display: flex; gap: 4px; }
+  nav button { padding: 8px 18px; border-radius: 20px; border: none; background: none; color: #5f6368; font-weight: 500; cursor: pointer; font-size: 13px; font-family: inherit; transition: all .15s; }
+  nav button.active { background: #e8f0fe; color: #1a73e8; }
+
+  main { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: #fff; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 2px rgba(60,64,67,.3), 0 1px 3px rgba(60,64,67,.15); display: flex; align-items: center; gap: 14px; }
+  .stat-icon { width: 44px; height: 44px; border-radius: 50%; background: #e8f0fe; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .stat-label { font-size: 11px; color: #5f6368; font-weight: 500; margin-bottom: 2px; }
+  .stat-val { font-size: 24px; font-weight: 700; }
+
+  /* Card */
+  .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 2px rgba(60,64,67,.3), 0 1px 3px rgba(60,64,67,.15); overflow: hidden; }
+  .card-header { padding: 16px 24px; border-bottom: 1px solid #dadce0; display: flex; align-items: center; justify-content: space-between; }
+  .card-body { padding: 20px 24px; }
+
+  /* Date nav */
+  .date-nav { display: flex; align-items: center; gap: 10px; }
+  .date-nav button { background: none; border: 1px solid #dadce0; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 14px; color: #5f6368; }
+  .date-nav span { font-weight: 500; font-size: 14px; }
+  .today-btn { font-size: 12px; color: #1a73e8; background: none; border: 1px solid #1a73e8; border-radius: 4px; padding: 4px 12px; cursor: pointer; font-weight: 500; font-family: inherit; }
+
+  /* Section label */
+  .section-label { font-size: 11px; font-weight: 500; color: #5f6368; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
+
+  /* Emoji buttons */
+  .emoji-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+  .emoji-btn { font-size: 22px; background: #f8f9fa; border: 2px solid transparent; border-radius: 8px; width: 44px; height: 44px; cursor: pointer; transition: all .15s; }
+  .emoji-btn.selected { background: #e8f0fe; border-color: #1a73e8; }
+
+  /* Textarea */
+  textarea { width: 100%; min-height: 240px; border: 1px solid #dadce0; border-radius: 4px; padding: 14px; font-size: 14px; line-height: 1.8; resize: vertical; outline: none; background: #fff; color: #202124; font-family: inherit; transition: border .2s; }
+  textarea:focus { border: 2px solid #1a73e8; }
+
+  /* Footer row */
+  .footer-row { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; }
+  .char-count { font-size: 12px; color: #5f6368; }
+  .footer-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .warn { font-size: 12px; color: #ea4335; font-weight: 500; }
+  .save-btn { padding: 9px 24px; border-radius: 4px; border: none; background: #1a73e8; color: #fff; font-weight: 500; cursor: pointer; font-size: 14px; font-family: inherit; box-shadow: 0 1px 3px rgba(26,115,232,.4); transition: background .2s; }
+  .save-btn:disabled { background: #dadce0; box-shadow: none; cursor: default; }
+
+  /* List */
+  .list-meta { font-size: 12px; color: #5f6368; margin-bottom: 14px; font-weight: 500; }
+  .entry-card { background: #fff; border-radius: 8px; padding: 16px 20px; margin-bottom: 10px; cursor: pointer; box-shadow: 0 1px 2px rgba(60,64,67,.3), 0 1px 3px rgba(60,64,67,.15); border-left: 4px solid #1a73e8; transition: box-shadow .2s; }
+  .entry-card:hover { box-shadow: 0 2px 6px rgba(60,64,67,.3), 0 1px 4px rgba(60,64,67,.2); }
+  .entry-date { font-weight: 500; font-size: 13px; color: #1a73e8; }
+  .entry-preview { font-size: 13px; color: #5f6368; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
+
+  /* Empty */
+  .empty { background: #fff; border-radius: 8px; padding: 60px 0; text-align: center; color: #5f6368; box-shadow: 0 1px 2px rgba(60,64,67,.3); }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+  /* Read */
+  .back-btn { background: none; border: none; color: #1a73e8; cursor: pointer; font-size: 13px; margin-bottom: 16px; padding: 0; font-weight: 500; font-family: inherit; }
+  .read-header { background: linear-gradient(135deg,#1a73e8,#4285f4); padding: 20px 24px; color: #fff; }
+  .read-title { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+  .read-emoji { font-size: 26px; }
+  .read-body { padding: 20px 24px; }
+  .read-text { font-size: 14px; line-height: 1.9; color: #202124; white-space: pre-wrap; margin-bottom: 24px; }
+  .read-actions { display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid #dadce0; padding-top: 16px; }
+  .edit-btn { padding: 8px 20px; border-radius: 4px; border: 1px solid #dadce0; background: #fff; cursor: pointer; font-size: 13px; color: #5f6368; font-family: inherit; }
+  .del-btn { padding: 8px 20px; border-radius: 4px; border: none; background: #ea4335; color: #fff; cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit; }
+
+  /* Hidden */
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📔</div>
+    <span class="logo-text">My Diary</span>
+  </div>
+  <nav>
+    <button id="tab-write" class="active" onclick="switchView('write')">✏️ 쓰기</button>
+    <button id="tab-list" onclick="switchView('list')">📚 모아보기</button>
+  </nav>
+</header>
+
+<main>
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-icon">📝</div>
+      <div>
+        <div class="stat-label">총 일기</div>
+        <div class="stat-val" id="total-count" style="color:#1a73e8">0개</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🔥</div>
+      <div>
+        <div class="stat-label">연속 기록</div>
+        <div class="stat-val" id="streak-count" style="color:#ea4335">0일</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WRITE VIEW -->
+  <div id="view-write">
+    <div class="card">
+      <div class="card-header">
+        <div class="date-nav">
+          <button onclick="shiftDate(-1)">‹</button>
+          <span id="display-date"></span>
+          <button onclick="shiftDate(1)">›</button>
+        </div>
+        <button class="today-btn" onclick="goToday()">오늘</button>
+      </div>
+      <div class="card-body">
+        <div class="section-label">오늘의 기분</div>
+        <div class="emoji-row" id="mood-row"></div>
+        <div class="section-label">날씨</div>
+        <div class="emoji-row" id="weather-row"></div>
+        <textarea id="diary-text" placeholder="오늘 하루는 어땠나요? 자유롭게 기록해 보세요..." oninput="updateChar()"></textarea>
+        <div class="footer-row">
+          <span class="char-count" id="char-count">0자</span>
+          <div class="footer-right">
+            <span class="warn hidden" id="warn-msg"></span>
+            <button class="save-btn" id="save-btn" onclick="save()">저장하기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIST VIEW -->
+  <div id="view-list" class="hidden">
+    <div class="list-meta" id="list-meta"></div>
+    <div id="entry-list"></div>
+  </div>
+
+  <!-- READ VIEW -->
+  <div id="view-read" class="hidden">
+    <button class="back-btn" onclick="switchView('list')">← 목록으로</button>
+    <div class="card">
+      <div class="read-header">
+        <div class="read-title" id="read-date"></div>
+        <div class="read-emoji" id="read-emoji"></div>
+      </div>
+      <div class="read-body">
+        <div class="read-text" id="read-text"></div>
+        <div class="read-actions">
+          <button class="edit-btn" onclick="editEntry()">수정</button>
+          <button class="del-btn" onclick="deleteEntry()">삭제</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
 const MOODS = ["😊","😐","😢","😡","😴","🥰","😰"];
 const WEATHERS = ["☀️","☁️","🌧️","⛄"];
+const DAYS = ["일","월","화","수","목","금","토"];
+
+let entries = JSON.parse(localStorage.getItem("diary_entries") || "{}");
+let selectedDate = formatDate(new Date());
+let selectedMood = "";
+let selectedWeather = "";
+let currentReadDate = "";
 
 function formatDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-function displayDate(dateStr) {
-  const [y,m,d] = dateStr.split("-");
-  return `${y}년 ${parseInt(m)}월 ${parseInt(d)}일`;
+function displayDate(s) {
+  const [y,m,d] = s.split("-");
+  const day = DAYS[new Date(s).getDay()];
+  return `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 (${day})`;
+}
+function saveStorage() {
+  localStorage.setItem("diary_entries", JSON.stringify(entries));
 }
 
-export default function App() {
-  const [entries, setEntries] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("diary_entries") || "{}"); } catch { return {}; }
+// Init emoji buttons
+function initEmoji() {
+  const mr = document.getElementById("mood-row");
+  MOODS.forEach(m => {
+    const b = document.createElement("button");
+    b.className = "emoji-btn"; b.textContent = m; b.dataset.val = m;
+    b.onclick = () => { selectedMood = selectedMood===m?"":m; renderEmoji(); clearWarn(); };
+    mr.appendChild(b);
   });
-  const [view, setView] = useState("write"); // write | list | read
-  const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
-  const [draft, setDraft] = useState({ text:"", mood:"", weather:"" });
-  const [readEntry, setReadEntry] = useState(null);
-  const [saved, setSaved] = useState(false);
-  const [warn, setWarn] = useState("");
-
-  useEffect(() => {
-    const e = entries[selectedDate];
-    setDraft(e ? { text: e.text, mood: e.mood, weather: e.weather } : { text:"", mood:"", weather:"" });
-    setSaved(false);
-  }, [selectedDate]);
-
-  useEffect(() => {
-    localStorage.setItem("diary_entries", JSON.stringify(entries));
-  }, [entries]);
-
-  const totalCount = Object.keys(entries).length;
-  const streak = (() => {
-    let count = 0, d = new Date();
-    while (entries[formatDate(d)]) { count++; d.setDate(d.getDate()-1); }
-    return count;
-  })();
-
-  function save() {
-    if (!draft.text.trim()) return;
-    if (!draft.mood) { setWarn("기분을 선택해주세요! 😊"); return; }
-    if (!draft.weather) { setWarn("날씨를 선택해주세요! 🌤️"); return; }
-    setWarn("");
-    setEntries(prev => ({ ...prev, [selectedDate]: { ...draft, updatedAt: Date.now() } }));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  function deleteEntry(date) {
-    setEntries(prev => { const n = {...prev}; delete n[date]; return n; });
-    setView("list");
-  }
-
-  // Sorted list
-  const sortedDates = Object.keys(entries).sort((a,b) => b.localeCompare(a));
-
-  return (
-    <div style={{ minHeight:"100vh", background:"#fafaf8", fontFamily:"'Pretendard','Apple SD Gothic Neo',sans-serif", color:"#1a1a1a" }}>
-      {/* Header */}
-      <header style={{ borderBottom:"1px solid #ebebeb", padding:"18px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"#fff", position:"sticky", top:0, zIndex:10 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <span style={{ fontSize:22, fontWeight:700, letterSpacing:"-0.5px" }}>📔 오늘의 일기</span>
-        </div>
-        <div style={{ display:"flex", gap:8 }}>
-          <button onClick={()=>setView("write")} style={{ padding:"7px 16px", borderRadius:20, border:"none", background: view==="write"?"#1a1a1a":"#f0f0ee", color: view==="write"?"#fff":"#555", fontWeight:600, cursor:"pointer", fontSize:13 }}>✏️ 쓰기</button>
-          <button onClick={()=>setView("list")} style={{ padding:"7px 16px", borderRadius:20, border:"none", background: view==="list"||view==="read"?"#1a1a1a":"#f0f0ee", color: view==="list"||view==="read"?"#fff":"#555", fontWeight:600, cursor:"pointer", fontSize:13 }}>📚 모아보기</button>
-        </div>
-      </header>
-
-      <main style={{ maxWidth:640, margin:"0 auto", padding:"28px 20px" }}>
-        {/* Stats */}
-        <div style={{ display:"flex", gap:12, marginBottom:28 }}>
-          {[{label:"총 일기",val:`${totalCount}개`},{label:"연속 기록",val:`${streak}일`}].map(s=>(
-            <div key={s.label} style={{ flex:1, background:"#fff", border:"1px solid #ebebeb", borderRadius:14, padding:"14px 18px" }}>
-              <div style={{ fontSize:11, color:"#aaa", fontWeight:500, marginBottom:4 }}>{s.label}</div>
-              <div style={{ fontSize:22, fontWeight:700 }}>{s.val}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* WRITE VIEW */}
-        {view==="write" && (
-          <div>
-            {/* Date picker */}
-            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
-              <button onClick={()=>{ const d=new Date(selectedDate); d.setDate(d.getDate()-1); setSelectedDate(formatDate(d)); }} style={{ background:"none", border:"1px solid #e0e0e0", borderRadius:8, width:32, height:32, cursor:"pointer", fontSize:16 }}>‹</button>
-              <span style={{ fontWeight:600, fontSize:15 }}>{displayDate(selectedDate)}</span>
-              <button onClick={()=>{ const d=new Date(selectedDate); d.setDate(d.getDate()+1); const today=formatDate(new Date()); const next=formatDate(d); if(next<=today) setSelectedDate(next); }} style={{ background:"none", border:"1px solid #e0e0e0", borderRadius:8, width:32, height:32, cursor:"pointer", fontSize:16 }}>›</button>
-              <button onClick={()=>setSelectedDate(formatDate(new Date()))} style={{ marginLeft:"auto", fontSize:12, color:"#888", background:"none", border:"1px solid #e0e0e0", borderRadius:8, padding:"4px 10px", cursor:"pointer" }}>오늘</button>
-            </div>
-
-            {/* Mood */}
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:12, color:"#aaa", marginBottom:8, fontWeight:500 }}>오늘의 기분</div>
-              <div style={{ display:"flex", gap:8 }}>
-                {MOODS.map(m=>(
-                  <button key={m} onClick={()=>setDraft(p=>({...p, mood:p.mood===m?"":m}))} style={{ fontSize:22, background: draft.mood===m?"#f0efe8":"none", border: draft.mood===m?"2px solid #c8c4b0":"2px solid transparent", borderRadius:10, width:40, height:40, cursor:"pointer", transition:"all .15s" }}>{m}</button>
-                ))}
-              </div>
-            </div>
-
-            {/* Weather */}
-            <div style={{ marginBottom:18 }}>
-              <div style={{ fontSize:12, color:"#aaa", marginBottom:8, fontWeight:500 }}>날씨</div>
-              <div style={{ display:"flex", gap:8 }}>
-                {WEATHERS.map(w=>(
-                  <button key={w} onClick={()=>setDraft(p=>({...p, weather:p.weather===w?"":w}))} style={{ fontSize:22, background: draft.weather===w?"#f0efe8":"none", border: draft.weather===w?"2px solid #c8c4b0":"2px solid transparent", borderRadius:10, width:40, height:40, cursor:"pointer", transition:"all .15s" }}>{w}</button>
-                ))}
-              </div>
-            </div>
-
-            {/* Editor */}
-            <textarea
-              value={draft.text}
-              onChange={e=>{ setDraft(p=>({...p,text:e.target.value})); setSaved(false); }}
-              placeholder="오늘 하루는 어땠나요? 자유롭게 기록해 보세요..."
-              style={{ width:"100%", minHeight:260, border:"1px solid #e8e8e6", borderRadius:14, padding:"18px", fontSize:15, lineHeight:1.8, resize:"vertical", outline:"none", background:"#fff", boxSizing:"border-box", color:"#1a1a1a", fontFamily:"inherit" }}
-            />
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:12 }}>
-              <span style={{ fontSize:12, color:"#bbb" }}>{draft.text.length}자</span>
-              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
-                {warn && <span style={{ fontSize:12, color:"#e05555", fontWeight:500 }}>⚠️ {warn}</span>}
-                <button onClick={save} disabled={!draft.text.trim()} style={{ padding:"10px 28px", borderRadius:20, border:"none", background: draft.text.trim()?"#1a1a1a":"#ddd", color:"#fff", fontWeight:700, cursor: draft.text.trim()?"pointer":"default", fontSize:14, transition:"background .2s" }}>
-                  {saved ? "✓ 저장됨" : "저장하기"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* LIST VIEW */}
-        {view==="list" && (
-          <div>
-            <div style={{ fontSize:13, color:"#aaa", marginBottom:16, fontWeight:500 }}>총 {totalCount}개의 일기</div>
-            {sortedDates.length === 0 && (
-              <div style={{ textAlign:"center", padding:"60px 0", color:"#bbb" }}>
-                <div style={{ fontSize:40, marginBottom:12 }}>📭</div>
-                <div>아직 작성된 일기가 없어요.<br/>첫 일기를 써보세요!</div>
-              </div>
-            )}
-            {sortedDates.map(date => {
-              const e = entries[date];
-              return (
-                <div key={date} onClick={()=>{ setReadEntry({date, ...e}); setView("read"); }} style={{ background:"#fff", border:"1px solid #ebebeb", borderRadius:14, padding:"16px 20px", marginBottom:12, cursor:"pointer", transition:"box-shadow .15s" }}
-                  onMouseEnter={el=>el.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,0.07)"}
-                  onMouseLeave={el=>el.currentTarget.style.boxShadow="none"}
-                >
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                    <span style={{ fontWeight:600, fontSize:14 }}>{displayDate(date)}</span>
-                    <span style={{ fontSize:18 }}>{e.mood} {e.weather}</span>
-                  </div>
-                  <div style={{ fontSize:14, color:"#666", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{e.text}</div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* READ VIEW */}
-        {view==="read" && readEntry && (
-          <div>
-            <button onClick={()=>setView("list")} style={{ background:"none", border:"none", color:"#888", cursor:"pointer", fontSize:13, marginBottom:20, padding:0 }}>← 목록으로</button>
-            <div style={{ background:"#fff", border:"1px solid #ebebeb", borderRadius:16, padding:"28px 24px" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:20 }}>
-                <div>
-                  <div style={{ fontWeight:700, fontSize:18, marginBottom:4 }}>{displayDate(readEntry.date)}</div>
-                  <div style={{ fontSize:22 }}>{readEntry.mood} {readEntry.weather}</div>
-                </div>
-                <div style={{ display:"flex", gap:8 }}>
-                  <button onClick={()=>{ setSelectedDate(readEntry.date); setView("write"); }} style={{ padding:"6px 14px", borderRadius:12, border:"1px solid #e0e0e0", background:"none", cursor:"pointer", fontSize:12, color:"#555" }}>수정</button>
-                  <button onClick={()=>deleteEntry(readEntry.date)} style={{ padding:"6px 14px", borderRadius:12, border:"1px solid #ffd0d0", background:"none", cursor:"pointer", fontSize:12, color:"#e05555" }}>삭제</button>
-                </div>
-              </div>
-              <div style={{ fontSize:15, lineHeight:1.9, color:"#333", whiteSpace:"pre-wrap" }}>{readEntry.text}</div>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
-  );
+  const wr = document.getElementById("weather-row");
+  WEATHERS.forEach(w => {
+    const b = document.createElement("button");
+    b.className = "emoji-btn"; b.textContent = w; b.dataset.val = w;
+    b.onclick = () => { selectedWeather = selectedWeather===w?"":w; renderEmoji(); clearWarn(); };
+    wr.appendChild(b);
+  });
 }
+function renderEmoji() {
+  document.querySelectorAll("#mood-row .emoji-btn").forEach(b => b.classList.toggle("selected", b.dataset.val===selectedMood));
+  document.querySelectorAll("#weather-row .emoji-btn").forEach(b => b.classList.toggle("selected", b.dataset.val===selectedWeather));
+}
+
+function loadDate() {
+  document.getElementById("display-date").textContent = displayDate(selectedDate);
+  const e = entries[selectedDate];
+  document.getElementById("diary-text").value = e ? e.text : "";
+  selectedMood = e ? e.mood : "";
+  selectedWeather = e ? e.weather : "";
+  renderEmoji(); updateChar(); clearWarn();
+}
+
+function shiftDate(delta) {
+  const d = new Date(selectedDate); d.setDate(d.getDate()+delta);
+  const next = formatDate(d);
+  if (delta > 0 && next > formatDate(new Date())) return;
+  selectedDate = next; loadDate();
+}
+function goToday() { selectedDate = formatDate(new Date()); loadDate(); }
+
+function updateChar() {
+  const t = document.getElementById("diary-text").value;
+  document.getElementById("char-count").textContent = t.length + "자";
+  document.getElementById("save-btn").disabled = !t.trim();
+}
+
+function clearWarn() { const w = document.getElementById("warn-msg"); w.textContent=""; w.classList.add("hidden"); }
+function showWarn(msg) { const w = document.getElementById("warn-msg"); w.textContent="⚠️ "+msg; w.classList.remove("hidden"); }
+
+function save() {
+  const text = document.getElementById("diary-text").value.trim();
+  if (!text) return;
+  if (!selectedMood) { showWarn("기분을 선택해주세요!"); return; }
+  if (!selectedWeather) { showWarn("날씨를 선택해주세요!"); return; }
+  clearWarn();
+  entries[selectedDate] = { text, mood: selectedMood, weather: selectedWeather, updatedAt: Date.now() };
+  saveStorage(); updateStats();
+  const btn = document.getElementById("save-btn");
+  btn.textContent = "✓ 저장됨";
+  setTimeout(() => btn.textContent = "저장하기", 2000);
+}
+
+function updateStats() {
+  const total = Object.keys(entries).length;
+  document.getElementById("total-count").textContent = total + "개";
+  let streak=0, d=new Date();
+  while(entries[formatDate(d)]){ streak++; d.setDate(d.getDate()-1); }
+  document.getElementById("streak-count").textContent = streak + "일";
+}
+
+function switchView(v) {
+  ["write","list","read"].forEach(x => {
+    document.getElementById("view-"+x).classList.toggle("hidden", x!==v);
+  });
+  document.getElementById("tab-write").classList.toggle("active", v==="write");
+  document.getElementById("tab-list").classList.toggle("active", v==="list"||v==="read");
+  if (v==="list") renderList();
+}
+
+function renderList() {
+  const dates = Object.keys(entries).sort((a,b)=>b.localeCompare(a));
+  document.getElementById("list-meta").textContent = `총 ${dates.length}개의 일기`;
+  const el = document.getElementById("entry-list");
+  if (dates.length===0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><div>아직 작성된 일기가 없어요.<br/>첫 일기를 써보세요!</div></div>`;
+    return;
+  }
+  el.innerHTML = dates.map(date => {
+    const e = entries[date];
+    return `<div class="entry-card" onclick="openRead('${date}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="entry-date">${displayDate(date)}</span>
+        <span style="font-size:18px">${e.mood} ${e.weather}</span>
+      </div>
+      <div class="entry-preview">${e.text}</div>
+    </div>`;
+  }).join("");
+}
+
+function openRead(date) {
+  currentReadDate = date;
+  const e = entries[date];
+  document.getElementById("read-date").textContent = displayDate(date);
+  document.getElementById("read-emoji").textContent = e.mood + " " + e.weather;
+  document.getElementById("read-text").textContent = e.text;
+  switchView("read");
+}
+
+function editEntry() {
+  selectedDate = currentReadDate; loadDate(); switchView("write");
+}
+function deleteEntry() {
+  if (!confirm("정말 삭제할까요?")) return;
+  delete entries[currentReadDate]; saveStorage(); updateStats(); switchView("list");
+}
+
+// Boot
+initEmoji(); loadDate(); updateStats();
+</script>
+</body>
+</html>
